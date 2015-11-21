@@ -2,6 +2,43 @@
 Changes
 =======
 
+0.7.8 (2015-04-18)
+------------------
+
+* extra type annotations are added to make the code a bit faster;
+* mercurial mirror at bitbucket is dropped;
+* wrapper is rebuilt with Cython 0.22.
+
+0.7.7 (2014-11-19)
+------------------
+
+* ``DAWG.b_prefixes`` method for avoiding utf8 encoding/decoding
+  (thanks Ikuya Yamada);
+* wrapper is rebuilt with Cython 0.21.1.
+
+0.7.6 (2014-08-10)
+------------------
+
+* Wrapper is rebuilt with Cython 0.20.2 to fix some issues.
+
+0.7.5 (2014-06-05)
+------------------
+
+* Switched to setuptools;
+* some wheels are uploaded to pypi.
+
+0.7.4 (2014-05-29)
+------------------
+
+* Fixed a bug in DAWG building: input should be sorted according to its
+  binary representation.
+
+0.7.3 (2014-05-29)
+------------------
+
+* Wrapper is rebuilt with Cython 0.21dev;
+* Python 3.4 compatibility is verified.
+
 0.7.2 (2013-10-03)
 ------------------
 

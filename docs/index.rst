@@ -25,7 +25,9 @@ Bundled libb64_ is Public Domain.
 Installation
 ============
 
-pip install DAWG
+From `PyPI <https://pypi.python.org/pypi/DAWG>`_::
+
+    pip install DAWG
 
 Usage
 =====
@@ -414,15 +416,11 @@ Contributions are welcome!
 Contributing
 ============
 
-Development happens at github and bitbucket:
+Development happens at github: https://github.com/kmike/DAWG
 
-* https://github.com/kmike/DAWG
-* https://bitbucket.org/kmike/DAWG
+Issue tracker: https://github.com/kmike/DAWG/issues
 
-The main issue tracker is at github: https://github.com/kmike/DAWG/issues
-
-Feel free to submit ideas, bugs, pull requests (git or hg) or
-regular patches.
+Feel free to submit ideas, bugs or pull requests.
 
 If you found a bug in a C++ part please report it to the original
 `bug tracker <https://code.google.com/p/dawgdic/issues/list>`_.
@@ -453,7 +451,8 @@ Make sure `tox`_ is installed and run
 
     $ tox
 
-from the source checkout. Tests should pass under python 2.6, 2.7, 3.2 and 3.3.
+from the source checkout. Tests should pass under python 2.6, 2.7, 3.2, 3.3
+and 3.4.
 
 In order to run benchmarks, type
 

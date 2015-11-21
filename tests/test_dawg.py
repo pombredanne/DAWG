@@ -19,6 +19,7 @@ def test_contains():
     assert b'foo' in d
     assert b'x' not in d
 
+
 class TestDAWG(object):
 
     def test_sorted_iterable(self):
@@ -68,6 +69,19 @@ class TestDAWG(object):
         d = dawg.DAWG(['foo'])
         assert b'foo' in d
         assert b'foo\x00bar' not in d
+
+    def test_unicode_sorting(self):
+        key1 = '\U00010345\U0001033f\U00010337\U00010330\U0001033d'
+        key2 = '\uff72\uff9c\uff90\uff7b\uff9e\uff9c'
+
+        # This apparently depends on Python version:
+        # assert key1 < key2
+        # assert key1.encode('utf8') > key2.encode('utf8')
+
+        # Constructor should sort data according to utf8 values,
+        # not according to unicode sorting rules. It will raise an exception
+        # if data is sorted according to unicode rules.
+        dawg.DAWG([key1, key2])
 
 
 
@@ -167,6 +181,12 @@ class TestCompletionDAWG(object):
         assert d.prefixes("foobarz") == ["f", "foo", "foobar"]
         assert d.prefixes("x") == []
         assert d.prefixes("bar") == ["bar"]
+
+    def test_b_prefixes(self):
+        d = self.dawg()
+        assert d.b_prefixes(b"foobarz") == [b"f", b"foo", b"foobar"]
+        assert d.b_prefixes(b"x") == []
+        assert d.b_prefixes(b"bar") == [b"bar"]
 
     def test_iterprefixes(self):
         d = self.dawg()

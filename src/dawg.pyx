@@ -1,4 +1,5 @@
 # cython: profile=False
+# cython: embedsignature=True
 from __future__ import unicode_literals
 from libcpp.string cimport string
 from libcpp.vector cimport vector
@@ -20,8 +21,10 @@ import struct
 import sys
 from binascii import b2a_base64
 
+
 class Error(Exception):
     pass
+
 
 cdef class DAWG:
     """
@@ -34,7 +37,11 @@ cdef class DAWG:
         if arg is None:
             arg = []
         if not input_is_sorted:
-            arg = sorted(arg)
+            arg = [
+                (<unicode>key).encode('utf8') if isinstance(key, unicode) else key
+                for key in arg
+            ]
+            arg.sort()
         self._build_from_iterable(arg)
 
     def __dealloc__(self):
@@ -55,7 +62,7 @@ cdef class DAWG:
                 value = 0
 
             if isinstance(key, unicode):
-                b_key = key.encode('utf8')
+                b_key = <bytes>(<unicode>key).encode('utf8')
             else:
                 b_key = key
 
@@ -68,14 +75,13 @@ cdef class DAWG:
         if not _dictionary_builder.Build(self.dawg, &self.dct):
             raise Error("Can't build dictionary")
 
-
     def __contains__(self, key):
         if isinstance(key, unicode):
-            return self.has_key(key)
+            return self.has_key(<unicode>key)
         return self.b_has_key(key)
 
     cpdef bint has_key(self, unicode key) except -1:
-        return self.b_has_key(key.encode('utf8'))
+        return self.b_has_key(<bytes>key.encode('utf8'))
 
     cpdef bint b_has_key(self, bytes key) except -1:
         return self.dct.Contains(key, len(key))
@@ -186,16 +192,16 @@ cdef class DAWG:
         cdef int word_pos = start_pos
 
         while word_pos < end_pos:
-            b_step = key[word_pos].encode('utf8')
+            b_step = <bytes>(key[word_pos].encode('utf8'))
 
             if b_step in replace_chars:
                 next_index = index
-                b_replace_char, u_replace_char = replace_chars[b_step]
+                b_replace_char, u_replace_char = <tuple>replace_chars[b_step]
 
                 if self.dct.Follow(b_replace_char, &next_index):
                     prefix = current_prefix + key[start_pos:word_pos] + u_replace_char
                     extra_keys = self._similar_keys(prefix, key, next_index, replace_chars)
-                    res += extra_keys
+                    res.extend(extra_keys)
 
             if not self.dct.Follow(b_step, &index):
                 break
@@ -226,9 +232,11 @@ cdef class DAWG:
         '''
         Return a list with keys of this DAWG that are prefixes of the ``key``.
         '''
+        return [p.decode('utf8') for p in self.b_prefixes(<bytes>key.encode('utf8'))]
+
+    cpdef list b_prefixes(self, bytes b_key):
         cdef list res = []
         cdef BaseType index = self.dct.root()
-        cdef bytes b_key = key.encode('utf8')
         cdef int pos = 1
         cdef CharType ch
 
@@ -236,7 +244,7 @@ cdef class DAWG:
             if not self.dct.Follow(ch, &index):
                 break
             if self._has_value(index):
-                res.append(b_key[:pos].decode('utf8'))
+                res.append(b_key[:pos])
             pos += 1
 
         return res
@@ -246,7 +254,7 @@ cdef class DAWG:
         Return a generator with keys of this DAWG that are prefixes of the ``key``.
         '''
         cdef BaseType index = self.dct.root()
-        cdef bytes b_key = key.encode('utf8')
+        cdef bytes b_key = <bytes>key.encode('utf8')
         cdef int pos = 1
         cdef CharType ch
 
@@ -373,7 +381,6 @@ cdef class CompletionDAWG(DAWG):
 
         return self
 
-
     def load(self, path):
         """
         Load DAWG from a file.
@@ -479,7 +486,7 @@ cdef class BytesDAWG(CompletionDAWG):
             del self._completer
 
     cpdef bytes _raw_key(self, unicode key, bytes payload):
-        cdef bytes b_key = key.encode('utf8')
+        cdef bytes b_key = <bytes>key.encode('utf8')
 
         if self._b_payload_separator in b_key:
             raise Error("Payload separator (%r) is found within utf8-encoded key ('%s')" % (self._b_payload_separator, key))
@@ -518,7 +525,7 @@ cdef class BytesDAWG(CompletionDAWG):
         or ``default`` if the key is not found.
         """
         if isinstance(key, unicode):
-            res = self.get_value(key)
+            res = self.get_value(<unicode>key)
         else:
             res = self.b_get_value(key)
 
@@ -533,7 +540,7 @@ cdef class BytesDAWG(CompletionDAWG):
         return self.dct.Follow(self._c_payload_separator, index)
 
     cpdef list get_value(self, unicode key):
-        return self.b_get_value(key.encode('utf8'))
+        return self.b_get_value(<bytes>key.encode('utf8'))
 
     cdef list _value_for_index(self, BaseType index):
 
@@ -567,7 +574,6 @@ cdef class BytesDAWG(CompletionDAWG):
         if not self._follow_key(key, &index):
             return []
         return self._value_for_index(index)
-
 
     cpdef list items(self, unicode prefix=""):
         cdef bytes b_prefix = prefix.encode('utf8')
@@ -712,16 +718,16 @@ cdef class BytesDAWG(CompletionDAWG):
         cdef int word_pos = start_pos
 
         while word_pos < end_pos:
-            b_step = key[word_pos].encode('utf8')
+            b_step = <bytes>(key[word_pos].encode('utf8'))
 
             if b_step in replace_chars:
                 next_index = index
-                b_replace_char, u_replace_char = replace_chars[b_step]
+                b_replace_char, u_replace_char = <tuple>replace_chars[b_step]
 
                 if self.dct.Follow(b_replace_char, &next_index):
                     prefix = current_prefix + key[start_pos:word_pos] + u_replace_char
                     extra_items = self._similar_items(prefix, key, next_index, replace_chars)
-                    res += extra_items
+                    res.extend(extra_items)
 
             if not self.dct.Follow(b_step, &index):
                 break
@@ -759,15 +765,15 @@ cdef class BytesDAWG(CompletionDAWG):
         cdef int word_pos = start_pos
 
         while word_pos < end_pos:
-            b_step = key[word_pos].encode('utf8')
+            b_step = <bytes>(key[word_pos].encode('utf8'))
 
             if b_step in replace_chars:
                 next_index = index
-                b_replace_char, u_replace_char = replace_chars[b_step]
+                b_replace_char, u_replace_char = <tuple>replace_chars[b_step]
 
                 if self.dct.Follow(b_replace_char, &next_index):
                     extra_items = self._similar_item_values(word_pos+1, key, next_index, replace_chars)
-                    res += extra_items
+                    res.extend(extra_items)
 
             if not self.dct.Follow(b_step, &index):
                 break
@@ -879,7 +885,7 @@ cdef class IntDAWG(DAWG):
         cdef int res
 
         if isinstance(key, unicode):
-            res = self.get_value(key)
+            res = self.get_value(<unicode>key)
         else:
             res = self.b_get_value(key)
 
@@ -888,7 +894,7 @@ cdef class IntDAWG(DAWG):
         return res
 
     cpdef int get_value(self, unicode key):
-        cdef bytes b_key = key.encode('utf8')
+        cdef bytes b_key = <bytes>key.encode('utf8')
         return self.dct.Find(b_key)
 
     cpdef int b_get_value(self, bytes key):
@@ -923,7 +929,7 @@ cdef class IntCompletionDAWG(CompletionDAWG):
         cdef int res
 
         if isinstance(key, unicode):
-            res = self.get_value(key)
+            res = self.get_value(<unicode>key)
         else:
             res = self.b_get_value(key)
 
@@ -932,7 +938,7 @@ cdef class IntCompletionDAWG(CompletionDAWG):
         return res
 
     cpdef int get_value(self, unicode key):
-        cdef bytes b_key = key.encode('utf8')
+        cdef bytes b_key = <bytes>key.encode('utf8')
         return self.dct.Find(b_key)
 
     cpdef int b_get_value(self, bytes key):
